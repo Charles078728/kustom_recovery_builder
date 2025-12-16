@@ -63,7 +63,7 @@ jobs:
         echo "Device Tree: ${{ github.event.inputs.DEVICE_TREE }}"
         echo "Device Branch: ${{ github.event.inputs.DEVICE_TREE_BRANCH }}"
         echo "Device Path: ${{ github.event.inputs.DEVICE_PATH }}"
-        echo "Device Name: ${{ github.event.inputs.DEVICE_NAME }}"
+        echo "Device Name: ${{ github.event.inputs.DEVICE_NAME_LC }}"
         echo "Build Target: ${{ github.event.inputs.BUILD_TARGET }}image"
 
     - name: Cleanup
@@ -195,6 +195,7 @@ jobs:
       
     - name: Run LDCheck
       run: |
+        mkdir -p ${GITHUB_WORKSPACE}/android-recovery/out/target/product/${{ env.DEVICE_NAME_LC }}/recovery/root/
         cd tools
         mv -n libneeds ${GITHUB_WORKSPACE}/android-recovery/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/recovery/root/
         mv -n ldcheck ${GITHUB_WORKSPACE}/android-recovery/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/recovery/root/
