@@ -137,17 +137,40 @@ jobs:
           cd ${{ github.event.inputs.DEVICE_PATH }}
           echo "COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
-      - name: Check Build Makefile
-      run: |
-        cd android-recovery
-        if [ -f ${{ github.event.inputs.DEVICE_PATH }}/twrp_${{ github.event.inputs.DEVICE_NAME}}.mk ]; then
-            echo "DEVICE_MAKEFILE=twrp_${{ github.event.inputs.DEVICE_NAME }}" >> $GITHUB_ENV
-        elif [ -f ${{ github.event.inputs.DEVICE_PATH }}/omni_${{ github.event.inputs.DEVICE_NAME}}.mk ]; then
-            echo "DEVICE_MAKEFILE=omni_${{ github.event.inputs.DEVICE_NAME }}" >> $GITHUB_ENV
-        else
-            echo "No recovery makefile file found!"
-        fi
-      continue-on-error: true
+      - name: Detect recovery makefile
+        run: |
+          cd android-recovery
+          DT_PATH="${{ github.event.inputs.DEVICE_PATH }}"
+          DEV="${{ env.DEVICE_NAME_LC }}"
+
+          echo "Searching for recovery makefile in: $DT_PATH"
+          echo "Looking for: omni_${DEV}.mk or twrp_${DEV}.mk"
+
+          # First: exact lowercase match
+          if [ -f "${DT_PATH}/omni_${DEV}.mk" ]; then
+          FILE="omni_${DEV}.mk"
+          elif [ -f "${DT_PATH}/twrp_${DEV}.mk" ]; then
+          FILE="twrp_${DEV}.mk"
+
+          # Second: case-insensitive match
+          else
+          FILE=$(ls ${DT_PATH} | grep -Ei "^(omni|twrp)_${DEV}\.mk$" || true)
+          fi
+
+          # Third: fallback — ANY omni_*.mk or twrp_*.mk
+          if [ -z "$FILE" ]; then
+          FILE=$(ls ${DT_PATH} | grep -Ei "^(omni|twrp)_[a-z0-9]+\.mk$" | head -n 1 || true)
+          fi
+
+          if [ -z "$FILE" ]; then
+          echo "❌ No recovery makefile found in ${DT_PATH}"
+          echo "Files present:"
+          ls -1 ${DT_PATH}
+          exit 1
+          fi
+   
+          echo "✅ Found recovery makefile: $FILE"
+          echo "DEVICE_MAKEFILE=${FILE%.*}" >> $GITHUB_ENV
 
       - name: Install Python 2 (for older manifests)
         if: github.event.inputs.MANIFEST_BRANCH != 'twrp-11' && github.event.inputs.MANIFEST_BRANCH != 'twrp-12.1'
